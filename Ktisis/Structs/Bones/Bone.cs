@@ -116,6 +116,7 @@ namespace Ktisis.Structs.Bones {
 		public Bone? GetParent() {
 			return BoneList.GetParentOf(this);
 		}
+        // Get children
 		public Quaternion GetWorldRotation(Quaternion result)
         {
 			if (this.GetParent() != null)
@@ -128,5 +129,11 @@ namespace Ktisis.Structs.Bones {
 			}
 			return result;
         } 
-	}
+
+		// Get children
+
+		public List<Bone> GetChildren() {
+			return BoneList.GetChildrenDirect(this);
+		}
+    }
 }

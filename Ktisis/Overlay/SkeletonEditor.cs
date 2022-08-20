@@ -21,7 +21,7 @@ using Dalamud.Logging;
 
 namespace Ktisis.Overlay {
 	public sealed class SkeletonEditor {
-		private Ktisis Plugin;
+		internal Ktisis Plugin;
 		private GameGui Gui;
 		private ObjectTable ObjectTable;
 
@@ -83,7 +83,7 @@ namespace Ktisis.Overlay {
 
 		// Bone selection
 
-		public unsafe void SelectBone(Bone bone, BoneList bones) {
+		public unsafe void SelectBone(Bone bone) {
 			var model = GetSubjectModel();
 			if (model == null) return;
 

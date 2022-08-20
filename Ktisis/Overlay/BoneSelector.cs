@@ -13,6 +13,8 @@ namespace Ktisis.Structs.Bones {
 		public int ScrollIndex = 0;
 
 		public void Draw(SkeletonEditor editor, List<(int ListId, int Index)> hover) {
+			// Capture mouse input while hovering a bone.
+			// This allows us to intercept mouse clicks.
 			ImGui.SetNextFrameWantCaptureMouse(true);
 
 			var pos = ImGui.GetMousePos();
@@ -43,17 +45,22 @@ namespace Ktisis.Structs.Bones {
 					var bone = bones?[item.Index];
 					if (bone == null) continue;
 
+					var name = editor.Plugin.Locale.GetBoneName(bone.HkaBone.Name!);
 					var isSelected = i == ScrollIndex;
-					ImGui.Selectable(string.Format("{0}", bone.HkaBone.Name), isSelected);
+					ImGui.Selectable(name, isSelected);
 
 					if (isSelected && mouseDown)
-						editor.SelectBone(bone, bones!);
+						editor.SelectBone(bone);
 				}
 			}
 
 			ImGui.PopStyleVar(1);
 
 			ImGui.End();
+		}
+
+		public bool IsSelected(Bone bone) {
+			return (bone.BoneList.Id, bone.Index) == Current;
 		}
 	}
 }

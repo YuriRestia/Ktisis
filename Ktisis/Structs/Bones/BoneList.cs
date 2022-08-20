@@ -32,9 +32,7 @@ namespace Ktisis.Structs {
 
 		// Find parent
 
-
-		public Bone? GetParentOf(Bone bone)
-		{
+		public Bone? GetParentOf(Bone bone) {
 			var id = bone.ParentId;
 			return id >= 0 && id < Bones.Count ? this[id] : null;
 		}

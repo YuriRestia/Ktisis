@@ -36,10 +36,6 @@ namespace Ktisis.Structs.Bones {
 		}
 
 		public unsafe void SnapshotBone(Bone bone, ActorModel* model, MODE mode = MODE.WORLD) {
-			//        if (disableRead)
-			//        {
-			//return;
-			//        }
 			RootRotation = model->Rotation;
 			ScaleModifier = model->Height;
 
@@ -134,11 +130,7 @@ namespace Ktisis.Structs.Bones {
 			// Convert to Transform
 
 			var delta = new Transform();
-			//var inverse = Quaternion.Inverse(RootRotation);
-			//delta.Position = Vector4.Transform(
-			//	translate - WorldPos,
-			//	inverse
-			//) / ScaleModifier;
+
 			// Convert position
 
 			//var inverse = Quaternion.Inverse(RootRotation);

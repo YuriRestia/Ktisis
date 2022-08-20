@@ -1,10 +1,15 @@
 ﻿using System.Numerics;
+using System.Collections.Generic;
 
 using ImGuiNET;
+
+using Ktisis.Localization;
 
 namespace Ktisis.Interface {
 	internal class ConfigUI {
 		private Ktisis Plugin;
+
+		private Configuration Cfg;
 
 		public bool Visible = false;
 
@@ -12,6 +17,7 @@ namespace Ktisis.Interface {
 
 		public ConfigUI(Ktisis plugin) {
 			Plugin = plugin;
+			Cfg = Plugin.Configuration;
 		}
 
 		// Toggle visibility
@@ -38,14 +44,14 @@ namespace Ktisis.Interface {
 
 			if (ImGui.Begin("Ktisis Settings", ref Visible, ImGuiWindowFlags.NoResize)) {
 				if (ImGui.BeginTabBar("Settings")) {
-					var cfg = Plugin.Configuration;
-
 					if (ImGui.BeginTabItem("Interface"))
-						DrawInterfaceTab(cfg);
+						DrawInterfaceTab();
 					if (ImGui.BeginTabItem("Overlay"))
-						DrawOverlayTab(cfg);
+						DrawOverlayTab();
 					if (ImGui.BeginTabItem("Gizmo"))
-						DrawGizmoTab(cfg);
+						DrawGizmoTab();
+					if (ImGui.BeginTabItem("Language"))
+						DrawLanguageTab();
 
 					ImGui.EndTabBar();
 				}
@@ -57,7 +63,7 @@ namespace Ktisis.Interface {
 
 		// Interface
 
-		public void DrawInterfaceTab(Configuration cfg) {
+		public void DrawInterfaceTab() {
 			/*var autoOpen = cfg.AutoOpen;
 			if (ImGui.Checkbox("Auto Open", ref autoOpen)) {
 				cfg.AutoOpen = autoOpen;
@@ -69,11 +75,11 @@ namespace Ktisis.Interface {
 
 		// Overlay
 
-		public void DrawOverlayTab(Configuration cfg) {
-			var drawLines = cfg.DrawLinesOnSkeleton;
+		public void DrawOverlayTab() {
+			var drawLines = Cfg.DrawLinesOnSkeleton;
 			if (ImGui.Checkbox("Draw lines on skeleton", ref drawLines)) {
-				cfg.DrawLinesOnSkeleton = drawLines;
-				cfg.Save(Plugin);
+				Cfg.DrawLinesOnSkeleton = drawLines;
+				Cfg.Save(Plugin);
 			}
 
 			ImGui.EndTabItem();
@@ -81,11 +87,43 @@ namespace Ktisis.Interface {
 
 		// Gizmo
 
-		public void DrawGizmoTab(Configuration cfg) {
-			var allowAxisFlip = cfg.AllowAxisFlip;
+		public void DrawGizmoTab() {
+			var allowAxisFlip = Cfg.AllowAxisFlip;
 			if (ImGui.Checkbox("Flip axis to face camera", ref allowAxisFlip)) {
-				cfg.AllowAxisFlip = allowAxisFlip;
-				cfg.Save(Plugin);
+				Cfg.AllowAxisFlip = allowAxisFlip;
+				Cfg.Save(Plugin);
+			}
+
+			ImGui.EndTabItem();
+		}
+
+		// Language
+
+		public void DrawLanguageTab() {
+			var selected = "Unknown";
+			foreach (var lang in Locale.Languages) {
+				if (lang.Key == Cfg.Localization) {
+					selected = lang.Value;
+					break;
+				}
+			}
+
+			if (ImGui.BeginCombo("Language", selected)) {
+				foreach (var lang in Locale.Languages) {
+					if (ImGui.Selectable(lang.Value, lang.Value == selected)) {
+						Cfg.Localization = lang.Key;
+						Cfg.Save(Plugin);
+					}
+				}
+
+				ImGui.SetItemDefaultFocus();
+				ImGui.EndCombo();
+			}
+
+			var translateBones = Cfg.TranslateBones;
+			if (ImGui.Checkbox("Translate bone names", ref translateBones)) {
+				Cfg.TranslateBones = translateBones;
+				Cfg.Save(Plugin);
 			}
 
 			ImGui.EndTabItem();
