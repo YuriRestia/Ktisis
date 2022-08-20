@@ -16,6 +16,8 @@ using Ktisis.Structs;
 using Ktisis.Structs.Actor;
 using Ktisis.Structs.Bones;
 using Ktisis.Structs.FFXIV;
+using Ktisis.Helpers;
+using Dalamud.Logging;
 
 namespace Ktisis.Overlay {
 	public sealed class SkeletonEditor {
@@ -30,7 +32,7 @@ namespace Ktisis.Overlay {
 
 		public BoneSelector BoneSelector;
 		public BoneMod BoneMod;
-
+		public bool enableWrite;
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		internal delegate IntPtr GetMatrixDelegate();
 		internal GetMatrixDelegate GetMatrix;
@@ -86,7 +88,10 @@ namespace Ktisis.Overlay {
 			if (model == null) return;
 
 			BoneSelector.Current = (bones.Id, bone.Index);
+
+			enableWrite = false;
 			BoneMod.SnapshotBone(bone, model, Gizmode);
+			enableWrite = true;
 		}
 
 		// Build skeleton
@@ -108,7 +113,7 @@ namespace Ktisis.Overlay {
 				if (index.Pose == null)
 					continue;
 
-				var bones = new BoneList(i, index.Pose);
+				var bones = new BoneList(i, index.Pose, model);
 
 				var first = bones[0];
 				first.IsRoot = true;
@@ -153,7 +158,6 @@ namespace Ktisis.Overlay {
 				if (Subject != null)
 					BuildSkeleton();
 			}
-
 			if (Subject == null)
 				return;
 			if (Skeleton == null)
@@ -190,10 +194,12 @@ namespace Ktisis.Overlay {
 						}
 					}
 
-					if (pair == BoneSelector.Current) { // Gizmo
+					if (pair == BoneSelector.Current && enableWrite) { // Gizmo
+
 						var io = ImGui.GetIO();
 						var wp = ImGui.GetWindowPos();
 
+						ImGuizmo.SetOrthographic(false);
 						var matrix = (WorldMatrix*)GetMatrix();
 						if (matrix == null)
 							return;
@@ -221,15 +227,192 @@ namespace Ktisis.Overlay {
 						);
 
 						// TODO: Streamline this.
+						//var Rotation = new Vector3();
+						//Quaternion result = bone.Transform.Rotate;
+						//if (parent != null)
+						//{
+						//	Quaternion parentRot = parent.Transform.Rotation;
+						//	parentRot = Quaternion.Inverse(parentRot);
+						//	Rotation = MathHelpers.ToEuler(parentRot * bone.Transform.Rotation);
+						//}
+						//else
+						//{
+						//	Rotation = MathHelpers.ToEuler(bone.Transform.Rotation);
+						//}
+						
+						//var delta = BoneMod.GetDelta(bone);
+						var translate = new Vector3();
+						var translate2 = new Vector3();
+						var rotation = new Vector3();
+						var rotation2 = new Vector3();
+						var scale = new Vector3();
+						var scale2 = new Vector3();
+                        ImGuizmo.DecomposeMatrixToComponents(
+                            ref BoneMod.BoneMatrix.M11,
+                            ref translate.X,
+                            ref rotation.X,
+                            ref scale.X
+                        );
+                        ImGuizmo.DecomposeMatrixToComponents(
+							ref BoneMod.DeltaMatrix.M11,
+							ref translate2.X,
+							ref rotation2.X,
+							ref scale2.X
+						);
+						Bone parent = bone.GetParent()!;
+						var temp = bone.ParentRelativeRotation;
+						while (parent != null)
+						{
+							//parentList.Insert(0, parent);
+							//               Quaternion parentRot = parent.Transform.Rotation;
+							//parentRot = Quaternion.Inverse(parentRot);
+							//PluginLog.Log("Parent Rotation" + MathHelpers.ToEuler(parent.ParentRelativeRotation));
+							temp = temp * parent.ParentRelativeRotation;
 
-						//BoneMod.SnapshotBone(bone, model);
+							//PluginLog.Log("Temp" + MathHelpers.ToEuler(temp));
+							//PluginLog.Log("RootRotation values: " + MathHelpers.ToEuler(Quaternion.Inverse(parentRot) * parentRot * bone.Transform.Rotation));
+							//PluginLog.Log("RootRotation2 values: " + MathHelpers.ToEuler(bone.Transform.Rotation));
+							//PluginLog.Log("Rotation values: " + Rotation.X + " " + Rotation.Y + " " + Rotation.Z);
+							if (parent.GetParent()! != null)
+							{
+								parent = parent.GetParent()!;
+							}
+							else
+							{
+								parent = null;
+							}
+						}
+						PluginLog.Log("bone values: " + MathHelpers.ToEuler(temp));
+						PluginLog.Log("cursed values: " + MathHelpers.ToEuler(MathHelpers.ToQuaternion(rotation)));
+						PluginLog.Log("cursed values 2 " + rotation);
+						//if (!MathHelpers.IsApproximately(temp, MathHelpers.ToQuaternion(rotation), 0.001f))
+      //                  {
+						//	PluginLog.Log("bone values: " + MathHelpers.ToEuler(temp));
+						//	PluginLog.Log("cursed values: " + MathHelpers.ToEuler(MathHelpers.ToQuaternion(rotation)));
+						//	//bone.Transform.Rotation = model->Rotation * MathHelpers.ToQuaternion(rotation);
+						//	//bone.TransformBone(bone.Transform, Skeleton);
+						//	//ImGuizmo.RecomposeMatrixFromComponents(
+						//	//                             ref translate.X,
+						//	//                             ref rotation.X,
+						//	//                             ref scale.X,
+						//	//                             ref BoneMod.BoneMatrix.M11
+						//	//                         );
+						//}
+						//if (!MathHelpers.IsApproximately(bone.Transform.Rotation,  parent.Transform.Rotation * MathHelpers.ToQuaternion(rotation), 0.01f))
+						//if (!MathHelpers.IsApproximately(bone.Transform.Rotation, bone.Transform.Rotation * MathHelpers.ToQuaternion(rotation2), 0.0001f))
+						//{
+						//	Quaternion result;
+						//	//if (BoneMod.parentList.Count > 0)
+						//	//{
+						//	//	for (int i = 0; i < BoneMod.parentList.Count; i++)
+						//	//	{
+						//	//		if(i == 0)
+						// //                             {
+						//	//			result = BoneMod.parentList[0].Transform.Rotation;
+						// //                             }
+						// //                             else
+						// //                             {
+						//	//			result *= 
+						// //                             }
+						//	//	}
+						//	//}
+						//	bone.Transform.Rotation = bone.Transform.Rotation * MathHelpers.ToQuaternion(rotation2);
+						//	//bone.TransformBone(bone.Transform, Skeleton);
+						//	//Quaternion result = bone.Transform.Rotate;
+						//	Quaternion outRot = bone.Transform.Rotation;
+						//	PluginLog.Log("Init values: " + MathHelpers.ToEuler(outRot));
+						//	Quaternion testRot = MathHelpers.ToQuaternion(rotation);
+						//	PluginLog.Log("Init testRot values: " + MathHelpers.ToEuler(testRot));
+						//	Quaternion parentRot;
+						//	//while (parent != null)
+						//	//{
+						//	//	parentRot = parent.Transform.Rotation;
+						//	//	testRot = parentRot * testRot;
+						//	//	parentRot = Quaternion.Inverse(parentRot);
 
-						var delta = BoneMod.GetDelta();
+						//	//	outRot = parentRot * outRot;
+						//	//	//PluginLog.Log("RootRotation values: " + MathHelpers.ToEuler(Quaternion.Inverse(parentRot) * parentRot * bone.Transform.Rotation));
+						//	//	//PluginLog.Log("RootRotation2 values: " + MathHelpers.ToEuler(bone.Transform.Rotation));
+						//	//	//PluginLog.Log("Rotation values: " + Rotation.X + " " + Rotation.Y + " " + Rotation.Z);
+						//	//	if (parent.GetParent()! != null)
+						//	//	{
+						//	//		parent = parent.GetParent()!;
+						//	//	}
+						//	//	else
+						//	//	{
+						//	//		parent = null;
+						//	//	}
+						//	//}
+						//	var result = MathHelpers.ToEuler(outRot);
+						//	PluginLog.Log("Result values: " + MathHelpers.ToEuler(outRot));
+						//	PluginLog.Log("Test values: " + MathHelpers.ToEuler(testRot));
+						//	//PluginLog.Log("BoneBeforeChange " + MathHelpers.ToEuler(bone.Transform.Rotation));
+						//	//PluginLog.Log("Rotation2 " + rotation2);
 
-						bone.Transform.Rotate *= delta.Rotate;
-						bone.TransformBone(delta, Skeleton);
+						//	//PluginLog.Log("BoneAfterChange " + MathHelpers.ToEuler(bone.Transform.Rotation));
+						//	//var holder = MathHelpers.ToEuler(bone.Transform.Rotation * Quaternion.Inverse((Quaternion.Inverse(model->Rotation))));
+						//	//PluginLog.Log("Holder: " + MathHelpers.ToEuler(bone.Transform.Rotation));
+						//	//Quaternion parentRot = parent.Transform.Rotation;
+						//	//parentRot = Quaternion.Inverse(parentRot);
+						//	//rotation2 = MathHelpers.ToEuler(parentRot * bone.Transform.Rotation);
+						//	//ImGuizmo.RecomposeMatrixFromComponents(
+						//	//	ref translate.X,
+						//	//	ref result.X,
+						//	//	ref scale.X,
+						//	//	ref BoneMod.BoneMatrix.M11
+						//	//);
+						//}
+						//var changed = false;
+						//                  if (!(MathHelpers.IsApproximately(bone.Transform.Rotation, Quaternion.Inverse(model->Rotation) * delta.Rotation)))
+						//                  {
+						//	BoneMod.disableRead = true;
+						//	PluginLog.Log("BoneBeforeChange " + MathHelpers.ToEuler(bone.Transform.Rotation));
+						//	bone.Transform.Rotation = Quaternion.Inverse(model->Rotation) * delta.Rotation;
+						//	PluginLog.Log("BoneAfterChange " + MathHelpers.ToEuler(bone.Transform.Rotation));
+						//	//Quaternion result = bone.Transform.Rotate;
+						//	//if (parent != null)
+						//	//{
+						//	//	Quaternion parentRot = parent.Transform.Rotation;
+						//	//	parentRot = Quaternion.Inverse(parentRot);
+						//	//	BoneMod.Rotation = MathHelpers.ToEuler(parentRot * bone.Transform.Rotation);
+						//	//}
+						//	//else
+						//	//{
+						//	//	BoneMod.Rotation = MathHelpers.ToEuler(bone.Transform.Rotation);
+						//	//}
+						//	changed = true;
+						//                  }
+						//Quaternion result = bone.Transform.Rotation;
 
-					} else { // Dot
+						//PluginLog.Log("Rotation values bone: " + MathHelpers.ToEuler(bone.GetWorldRotation(result)));
+						//if (!(MathHelpers.IsApproximately(bone.Transform.Position, delta.Position)))
+						//{
+						//	bone.Transform.Position = delta.Position;
+						//	changed = true;
+						//}
+						//if (!(MathHelpers.IsApproximately(bone.Transform.Scale, delta.Scale)))
+						//{
+						//	bone.Transform.Scale = delta.Scale;
+						//	changed = true;
+						//}
+						//bone.Transform.Rotate = delta.Rotate;
+						//bone.TransformBone(delta, Skeleton);
+						//if (changed)
+						//{
+						//PluginLog.Log("Position values bone: " + bone.Transform.Position.X + " " + bone.Transform.Position.Y + " " + bone.Transform.Position.Z);
+						//PluginLog.Log("Scale values bone: " + bone.Transform.Scale.X + " " + bone.Transform.Scale.Y + " " + bone.Transform.Scale.Z);
+						//bone.TransformBone(bone.Transform, Skeleton);
+						//BoneMod.disableRead = false;
+						//ImGuizmo.RecomposeMatrixFromComponents(
+						//	ref BoneMod.WorldPos.X,
+						//	ref BoneMod.Rotation.X,
+						//	ref BoneMod.Scale.X,
+						//	ref BoneMod.BoneMatrix.M11
+						//);
+						//}
+
+					}
+					else { // Dot
 						var radius = Math.Max(3.0f, 10.0f - cam->Distance);
 
 						var area = new Vector2(radius, radius);
@@ -250,5 +433,6 @@ namespace Ktisis.Overlay {
 			if (hoveredBones.Count > 0)
 				BoneSelector.Draw(this, hoveredBones);
 		}
+
 	}
 }

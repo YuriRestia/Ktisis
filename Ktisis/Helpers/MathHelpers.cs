@@ -17,8 +17,8 @@ namespace Ktisis.Helpers {
 		// Euler <=> Quaternion
 		// Borrowed from Anamnesis
 
-		public static Quaternion ToQuaternion(Vector3 e) {
-			var euler = new Vector3(e.X, e.Z, e.Y);
+		public static Quaternion ToQuaternion(Vector3 euler) {
+			//var euler = new Vector3(e.X, e.Z, e.Y);
 
 			double yaw = euler.Y * Deg2Rad;
 			double pitch = euler.X * Deg2Rad;
@@ -92,5 +92,24 @@ namespace Ktisis.Helpers {
 
 			return angle;
 		}
+		public static bool IsApproximately(Quaternion current, Quaternion other, float errorMargin = 0.001f)
+		{
+			return IsApproximately(current.X, other.X, errorMargin)
+				&& IsApproximately(current.Y, other.Y, errorMargin)
+				&& IsApproximately(current.Z, other.Z, errorMargin)
+				&& IsApproximately(current.W, other.W, errorMargin);
+		}
+		public static bool IsApproximately(Vector4 current, Vector4 other, float errorMargin = 0.001f)
+		{
+			return IsApproximately(current.X, other.X, errorMargin)
+				&& IsApproximately(current.Y, other.Y, errorMargin)
+				&& IsApproximately(current.Z, other.Z, errorMargin);
+		}
+		private static bool IsApproximately(float a, float b, float errorMargin)
+		{
+			float d = MathF.Abs(a - b);
+			return d < errorMargin;
+		}
 	}
+
 }

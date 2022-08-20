@@ -4,17 +4,17 @@ using System.Collections.Generic;
 using ImGuizmoNET;
 
 using Ktisis.Structs.Havok;
+using Ktisis.Structs.Actor;
 
 namespace Ktisis.Structs.Bones {
 	public class Bone {
 		public int Index;
 		public short ParentId;
 		public Transform Transform;
-
+		public unsafe ActorModel* actor;
 		public HkaBone HkaBone;
-
 		public Quaternion RootRotation;
-
+		public Quaternion ParentRelativeRotation;
 		public bool IsRoot = false;
 		public List<int> LinkedTo;
 
@@ -22,7 +22,7 @@ namespace Ktisis.Structs.Bones {
 
 		// Constructor
 
-		public Bone(BoneList bones, int index) {
+		public unsafe Bone(BoneList bones, int index, ActorModel* model) {
 			BoneList = bones;
 
 			Index = index;
@@ -32,7 +32,17 @@ namespace Ktisis.Structs.Bones {
 			HkaBone = bones.Skeleton.Bones[index];
 
 			UpdateTransform(bones);
-
+			actor = model;
+			RootRotation = actor->Rotation;
+			if (this.GetParent() != null)
+            {
+				//RootRotation *= this.GetParent()!.Transform.Rotation;
+				ParentRelativeRotation = Transform.Rotation * Quaternion.Inverse(this.GetParent()!.Transform.Rotation);
+            }
+            else
+            {
+				ParentRelativeRotation = Transform.Rotation;
+			}
 			LinkedTo = new List<int>();
 		}
 
@@ -53,14 +63,14 @@ namespace Ktisis.Structs.Bones {
 		// Quaternion rotation
 
 		public Vector3 Rotate(Quaternion quat) {
-			var t = Transform.Translate;
+			var t = Transform.Position;
 			return Vector3.Transform(new Vector3(t.X, t.Y, t.Z), quat);
 		}
 
 		// Transform bone
 
 		public void TransformBone(Transform t) {
-			Transform.Translate += t.Translate;
+			Transform.Position += t.Position;
 			// doesn't work, disable this for now.
 			//Transform.Rotate *= t.Rotate;
 			// also disable this while reworking BoneMod
@@ -106,5 +116,17 @@ namespace Ktisis.Structs.Bones {
 		public Bone? GetParent() {
 			return BoneList.GetParentOf(this);
 		}
+		public Quaternion GetWorldRotation(Quaternion result)
+        {
+			if (this.GetParent() != null)
+			{
+				result *= this.GetParent()!.GetWorldRotation(result);
+			}
+			else
+			{
+				result *= Transform.Rotation;
+			}
+			return result;
+        } 
 	}
 }
